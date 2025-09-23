@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "win": "node worker_window.js"
   },
   "keywords": [],
   "author": "",

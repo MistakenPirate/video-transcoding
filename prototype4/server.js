@@ -56,3 +56,6 @@ Prototype 4:
 - A separate worker service consumes the queue, processes transcoding, and uploads results to MinIO
 - This makes the system non-blocking, scalable, and capable of handling multiple transcoding tasks in parallel
 */
+
+
+// worker should be run separately using node worker.js

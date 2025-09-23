@@ -41,7 +41,7 @@ app.get("/status/:id", async (req, res) => {
   if (!job) return res.status(404).json({ error: "Job not found" });
 
   const state = await job.getState();
-  const progress = await job.progress();
+  const progress = job.progress;
 
   const response = {
     jobId: job.id,
