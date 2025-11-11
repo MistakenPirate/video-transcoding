@@ -7,7 +7,8 @@ import { uploadDir } from "../config/paths";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "../db";
 import { metaDb, outboxDB } from "../db/schema";
-
+import { computeFileHash } from "../utils/computeHash";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -17,46 +18,68 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
   }
 
   const uploadId = uuidv4();
-  console.log("*****")
-  const s3Key = `uploads/${uploadId}/original.mp4`;
-  const bucket = "uploaded_videos";
+
   const localPath = path.join(uploadDir, req.file.filename);
-    console.log("*****")
+
+  const fileHash = await computeFileHash(localPath);
+  console.log("File hash:", fileHash);
+
+  const existing = await db
+    .select()
+    .from(metaDb)
+    .where(eq(metaDb.fileHash, fileHash));
+
+  if (existing.length > 0) {
+    console.log("Duplicate upload detected skipping S3 upload.");
+    return res.json({
+      uploadId: existing[0]?.uploadId,
+      message: "This video already exists in the system.",
+      duplicate: true,
+    });
+  }
+
+  const s3Key = `uploads/${fileHash}/original.mp4`;
+  const bucket = "uploaded_videos";
 
   // Upload to S3 (MinIO)
   await uploadFileToS3(localPath, s3Key);
-  console.log("*****")
+  console.log("*****");
 
-
+  try {
+    // throw new Error("Testing transaction failure");
     await db.transaction(async (tx) => {
-  // Insert into meta_db
-  const [video] = await tx
-    .insert(metaDb)
-    .values({
-      uploadId,                       
-      filename: req.file?.originalname || "unknown",
-      s3Key,                        
-      s3Bucket: bucket,    
-      status: "uploaded",
-    })
-    .returning({ id: metaDb.id, uploadId: metaDb.uploadId });
+      // Insert into meta_db
+      const [video] = await tx
+        .insert(metaDb)
+        .values({
+          uploadId,
+          filename: req.file?.originalname || "unknown",
+          fileHash,
+          s3Key,
+          s3Bucket: bucket,
+          status: "uploaded",
+        })
+        .returning({ id: metaDb.id, uploadId: metaDb.uploadId });
 
-  // Insert into outboxDB (mirroring meta info)
-  await tx.insert(outboxDB).values({
-    uploadId: video?.uploadId,     
-    filename: req.file?.originalname || "unknown",
-    s3Key,
-    s3Bucket: bucket,
-    uploadedAt: new Date(),
-  });
-});
-
+      await tx.insert(outboxDB).values({
+        uploadId: video?.uploadId,
+        filename: req.file?.originalname || "unknown",
+        s3Key,
+        s3Bucket: bucket,
+        uploadedAt: new Date(),
+      });
+    });
+  } catch (error) {
+    console.error("Database transaction failed:", error);
+    return res.status(500).json({
+      error: "File uploaded but database save failed. Retry will reconcile.",
+    });
+  }
 
   // const job = await videoQueue.add("transcode", {
   //   filename: req.file.filename,
   //   filepath: req.file.path,
   // });
-  console.log("*****")
 
   res.json({
     uploadId,

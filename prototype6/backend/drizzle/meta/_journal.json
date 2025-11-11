@@ -8,6 +8,13 @@
       "when": 1762784254077,
       "tag": "0000_broken_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762881999726,
+      "tag": "0001_wide_stingray",
+      "breakpoints": true
     }
   ]
 }
