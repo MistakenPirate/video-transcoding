@@ -138,3 +138,5 @@ dist
 
 uploads/
 outputs/
+drizzle.config.json
+minio-data
