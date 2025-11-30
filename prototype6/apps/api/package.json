@@ -1,0 +1,33 @@
+{
+  "name": "@video-transcoding/api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:check": "tsx src/scripts/checkDatabase.ts",
+    "db:add-columns": "tsx src/scripts/addMissingColumns.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.927.0",
+    "@neondatabase/serverless": "^1.0.2",
+    "@video-transcoding/db": "workspace:*",
+    "@video-transcoding/queue": "workspace:*",
+    "@video-transcoding/s3": "workspace:*",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.0",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.31.7",
+    "tsx": "^4.7.0",
+    "typescript": "^5.9.3"
+  }
+}
