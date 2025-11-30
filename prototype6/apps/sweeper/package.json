@@ -1,0 +1,20 @@
+{
+  "name": "@video-transcoding/sweeper",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx watch src/sweeper.ts",
+    "build": "tsc",
+    "start": "node dist/sweeper.js"
+  },
+  "dependencies": {
+    "@video-transcoding/db": "workspace:*",
+    "@video-transcoding/queue": "workspace:*",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.9.3"
+  }
+}
+
