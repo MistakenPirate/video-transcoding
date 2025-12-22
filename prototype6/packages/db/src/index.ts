@@ -2,14 +2,13 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL not found in environment variables. Make sure to load dotenv in your app entry point.");
-}
+// Hardcoded DATABASE_URL for now
+const DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/video_transcoding";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DATABASE_URL,
   // Disable SSL for local PostgreSQL (Docker)
-  ssl: process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1')
+  ssl: DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1')
     ? false
     : { rejectUnauthorized: false },
 });
