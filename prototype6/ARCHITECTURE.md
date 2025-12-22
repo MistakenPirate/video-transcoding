@@ -58,6 +58,57 @@ graph LR
 2. **API** queries **Redis** for job state and progress
 3. **API** returns job status, progress, and HLS playlist URLs
 
+## Tech Stack
+
+### Runtime & Language
+- **Node.js** >= 18.0.0
+- **TypeScript** 5.9.3
+- **pnpm** 9.0.0 (package manager)
+
+### Monorepo & Build Tools
+- **Turborepo** 2.0.0 - Monorepo build system
+- **tsx** 4.7.0 - TypeScript execution for development
+- **TypeScript Compiler** - Production builds
+
+### Backend Framework
+- **Express.js** 5.1.0 - Web framework for API server
+- **Multer** 2.0.2 - File upload middleware
+
+### Database & ORM
+- **PostgreSQL** 16-alpine - Relational database
+- **Drizzle ORM** 0.44.7 - TypeScript ORM
+- **Drizzle Kit** 0.31.7 - Database migrations and schema generation
+- **pg** 8.16.3 - PostgreSQL client
+
+### Queue System
+- **BullMQ** 5.63.0 - Redis-based job queue
+- **Redis** 7 - Queue backend
+
+### Storage
+- **AWS SDK v3** 3.927.0 - S3 client library
+- **MinIO** - S3-compatible object storage
+
+### Video Processing
+- **FFmpeg** (system dependency) - Video transcoding engine
+- **fluent-ffmpeg** 2.1.2 - Node.js wrapper for FFmpeg
+
+### Infrastructure & DevOps
+- **Docker** - Containerization
+- **Docker Compose** - Multi-container orchestration
+- **dotenv** 17.2.3 - Environment variable management
+
+### Utilities
+- **uuid** 13.0.0 - UUID generation
+- **crypto** (Node.js built-in) - File hashing for duplicate detection
+
+### Development Dependencies
+- **@types/express** 5.0.5
+- **@types/multer** 2.0.0
+- **@types/node** 24.10.0
+- **@types/pg** 8.15.6
+- **@types/uuid** 10.0.0
+- **@types/fluent-ffmpeg** 2.1.24
+
 ## Key Features
 
 - **Outbox Pattern**: Ensures reliable event publishing using database transactions
