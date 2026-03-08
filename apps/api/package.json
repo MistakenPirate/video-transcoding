@@ -5,8 +5,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts",
+    "db:generate": "pnpm --filter @video-transcoding/db db:generate",
     "db:check": "tsx src/scripts/checkDatabase.ts",
     "db:add-columns": "tsx src/scripts/addMissingColumns.ts"
   },
@@ -31,7 +30,6 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^24.10.0",
     "@types/uuid": "^10.0.0",
-    "drizzle-kit": "^0.31.7",
     "tsx": "^4.7.0",
     "typescript": "^5.9.3"
   }

@@ -5,7 +5,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "drizzle-orm": "^0.44.7",
@@ -14,6 +15,7 @@
   "devDependencies": {
     "@types/node": "^24.10.0",
     "@types/pg": "^8.15.6",
+    "drizzle-kit": "^0.31.7",
     "typescript": "^5.9.3"
   }
 }
