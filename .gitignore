@@ -2,7 +2,8 @@
 node_modules/
 .pnp
 .pnp.js
-minio_data/
+minio-data/
+prototype6/
 
 # Testing
 coverage/
