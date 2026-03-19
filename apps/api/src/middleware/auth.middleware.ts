@@ -6,6 +6,11 @@ export function authenticate(
   res: Response,
   next: NextFunction
 ): void {
+  // Let CORS preflight through without auth
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {

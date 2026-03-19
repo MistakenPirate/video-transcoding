@@ -36,6 +36,10 @@ export const refreshTokensTable = pgTable("refresh_tokens", {
 export const metaDb = pgTable("meta_db", {
   id: serial("id").primaryKey(),
   uploadId: uuid("upload_id").defaultRandom().notNull().unique(),
+  userId: uuid("user_id").references(() => usersTable.userId, {
+    onDelete: "cascade",
+    onUpdate: "cascade",
+  }),
   filename: varchar("filename", { length: 255 }).notNull(),
   fileHash: varchar("file_hash", { length: 64 }).notNull(),
   s3Key: text("s3_key").notNull(),

@@ -3,7 +3,6 @@ import { Request, Response, Router } from "express";
 import path from "path";
 import { uploadDir } from "../config/paths";
 import { db, metaDb, outboxDB } from "@video-transcoding/db";
-import videoQueue from "@video-transcoding/queue";
 import { computeFileHash } from "../utils/computeHash";
 import { upload } from "../utils/storage";
 import { uploadFileToS3 } from "../utils/uploadToS3";
@@ -45,6 +44,7 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
       const [video] = await tx
         .insert(metaDb)
         .values({
+          userId: req.user!.userId,
           filename: req.file!.originalname,
           fileHash,
           s3Key,
@@ -87,26 +87,25 @@ router.get("/status/:id", async (req: Request, res: Response) => {
   if (!id) {
     return res.status(400).json({ error: "Upload ID is required" });
   }
-  const job = await videoQueue.getJob(id);
-  if (!job) return res.status(404).json({ error: "Job not found" });
 
-  const state = await job.getState();
-  const progress = job.progress;
+  const [video] = await db
+    .select()
+    .from(metaDb)
+    .where(eq(metaDb.uploadId, id))
+    .limit(1);
+
+  if (!video) {
+    return res.status(404).json({ error: "Video not found" });
+  }
 
   const response: Record<string, any> = {
-    jobId: job.id,
-    state,
-    progress,
+    uploadId: video.uploadId,
+    status: video.status,
+    filename: video.filename,
   };
 
-  if (state === "completed") {
-    response.masterPlaylist = `http://localhost:9000/videos/${job.id}/master.m3u8`;
-    response.renditions = [
-      `http://localhost:9000/videos/${job.id}/360p/index.m3u8`,
-      `http://localhost:9000/videos/${job.id}/480p/index.m3u8`,
-      `http://localhost:9000/videos/${job.id}/720p/index.m3u8`,
-      `http://localhost:9000/videos/${job.id}/1080p/index.m3u8`,
-    ];
+  if (video.status === "completed" && video.jobId) {
+    response.masterPlaylist = `http://localhost:9000/videos/${video.jobId}/master.m3u8`;
   }
 
   res.json(response);
