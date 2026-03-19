@@ -1,0 +1,2 @@
+ALTER TABLE "meta_db" ADD COLUMN "user_id" uuid;--> statement-breakpoint
+ALTER TABLE "meta_db" ADD CONSTRAINT "meta_db_user_id_users_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("user_id") ON DELETE cascade ON UPDATE cascade;

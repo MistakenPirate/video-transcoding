@@ -50,4 +50,5 @@ lerna-debug.log*
 # Uploads
 uploads/
 outputs/
+temp/
 

@@ -19,7 +19,7 @@ export async function signUp(formData: FormData) {
 
   const { email, password } = validatedFields.data;
 
-  const res = await fetch("http://localhost:8000/auth/register", {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -39,15 +39,17 @@ export async function signUp(formData: FormData) {
 
   const c = await cookies();
   c.set("accessToken", data.accessToken, {
-    httpOnly: true,
+    httpOnly: false,
     secure: false,
     sameSite: "lax",
+    path: "/",
   });
 
   c.set("refreshToken", data.refreshToken, {
     httpOnly: true,
     secure: false,
     sameSite: "lax",
+    path: "/",
   });
 
   redirect("/dashboard");

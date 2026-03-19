@@ -6,6 +6,10 @@ import { redirect } from "next/navigation";
 export async function requireAuth() {
   const user = await getCurrentUser();
   if (!user) {
+    // Clear stale cookies before redirecting
+    const c = await cookies();
+    c.delete("accessToken");
+    c.delete("refreshToken");
     redirect("/signin");
   }
   return user;
@@ -18,7 +22,7 @@ export async function signOut() {
   const refreshToken = c.get("refreshToken")?.value;
 
   if (accessToken) {
-    await fetch(`http://localhost:8000/auth/logout`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -36,11 +40,15 @@ export async function signOut() {
 
 export async function getCurrentUser() {
   const c = await cookies();
-  const accessToken = c.get("accessToken")?.value;
+  let accessToken = c.get("accessToken")?.value;
 
-  if (!accessToken) return null;
+  if (!accessToken) {
+    // Try refreshing
+    accessToken = await refreshAccessToken();
+    if (!accessToken) return null;
+  }
 
-  const res = await fetch(`http://localhost:8000/auth/me`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -52,45 +60,56 @@ export async function getCurrentUser() {
     return data.user;
   }
 
-  // If access token expired try refresh
+  // Access token expired — try refresh
   if (res.status === 401) {
-    const refreshed = await refreshAccessToken();
+    const newToken = await refreshAccessToken();
+    if (!newToken) return null;
 
-    if (!refreshed) return null;
+    const retry = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${newToken}` },
+      cache: "no-store",
+    });
 
-    return getCurrentUser();
+    if (retry.ok) {
+      const data = await retry.json();
+      return data.user;
+    }
   }
 
   return null;
 }
 
-async function refreshAccessToken() {
+async function refreshAccessToken(): Promise<string | null> {
   const c = await cookies();
   const refreshToken = c.get("refreshToken")?.value;
 
-  if (!refreshToken) return false;
+  if (!refreshToken) return null;
 
-  const res = await fetch(`http://localhost:8000/auth/refresh`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),
   });
 
-  if (!res.ok) return false;
+  if (!res.ok) return null;
 
   const tokens = await res.json();
 
   c.set("accessToken", tokens.accessToken, {
-    httpOnly: true,
+    httpOnly: false,
+    secure: false,
+    sameSite: "lax",
     path: "/",
   });
 
-  c.set("refreshToken", tokens.refreshToken, {
-    httpOnly: true,
-    path: "/",
-  });
+  if (tokens.refreshToken) {
+    c.set("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+    });
+  }
 
-  return true;
+  return tokens.accessToken;
 }
