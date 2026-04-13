@@ -48,7 +48,7 @@ Or create a `.env` file in the root directory with:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/video_transcoding
 REDIS_HOST=localhost
 REDIS_PORT=6379
-PORT=3000
+PORT=8000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 S3_BUCKET=uploaded-videos
@@ -62,6 +62,11 @@ WORKER_CONCURRENCY=1
 Run all services in development mode:
 
 ```bash
+docker compose up -d
+cd apps/api
+pnpm drizzle-kit generate
+pnpm drizzle-kit push
+cd ../..
 pnpm dev
 ```
 
@@ -113,7 +118,7 @@ pnpm --filter @video-transcoding/api db:check
 Main Express server handling video uploads and status queries.
 
 - **Routes**: `/upload` (POST, GET `/status/:id`)
-- **Port**: 3000 (configurable via PORT env var)
+- **Port**: 8000 (configurable via PORT env var)
 
 ### Sweeper (`apps/sweeper`)
 
@@ -134,6 +139,7 @@ Video transcoding worker that consumes jobs from the queue and converts videos t
 - Updates job progress and status in database
 
 **Requirements:**
+
 - FFmpeg must be installed on the system
 - Requires sufficient disk space for temporary files
 
@@ -142,6 +148,7 @@ Video transcoding worker that consumes jobs from the queue and converts videos t
 ### `@video-transcoding/db`
 
 Shared database package containing:
+
 - Database schema (Drizzle ORM)
 - Database connection
 - Exported tables: `metaDb`, `outboxDB`
@@ -149,6 +156,7 @@ Shared database package containing:
 ### `@video-transcoding/queue`
 
 Shared queue package containing:
+
 - BullMQ queue configuration
 - Video transcoding queue instance
 - Worker factory function
@@ -156,6 +164,7 @@ Shared queue package containing:
 ### `@video-transcoding/s3`
 
 Shared S3 package containing:
+
 - S3 client configuration (works with MinIO and AWS S3)
 - Environment-based configuration
 
@@ -164,11 +173,13 @@ Shared S3 package containing:
 To add a new worker service:
 
 1. Create a new app in `apps/`:
+
    ```bash
    mkdir -p apps/my-worker/src
    ```
 
 2. Create `package.json`:
+
    ```json
    {
      "name": "@video-transcoding/my-worker",
@@ -185,6 +196,7 @@ To add a new worker service:
    ```
 
 3. Use shared packages:
+
    ```typescript
    import { db, metaDb } from "@video-transcoding/db";
    import videoQueue from "@video-transcoding/queue";
@@ -218,6 +230,7 @@ docker-compose down -v
 ```
 
 The docker-compose file includes:
+
 - **PostgreSQL** (port 5432) - Database for video metadata
 - **Redis** (port 6379) - Queue backend for BullMQ
 - **MinIO** (ports 9000, 9001) - S3-compatible object storage
@@ -227,4 +240,3 @@ After starting Docker services, run database migrations:
 ```bash
 pnpm --filter @video-transcoding/api db:migrate
 ```
-
