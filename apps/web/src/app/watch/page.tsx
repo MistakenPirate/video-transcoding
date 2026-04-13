@@ -27,7 +27,7 @@ export default function WatchPage() {
           return;
         }
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/videos`, {
+        const res = await fetch(`http://localhost:8000/videos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

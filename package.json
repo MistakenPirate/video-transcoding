@@ -14,6 +14,7 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.31.7",
     "turbo": "^2.0.0",
     "typescript": "^5.9.3"
   },
@@ -22,4 +23,3 @@
   },
   "packageManager": "pnpm@9.0.0"
 }
-

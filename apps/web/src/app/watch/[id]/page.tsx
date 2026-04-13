@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState, use } from "react";
 import Hls from "hls.js";
+import Link from "next/link";
+import { use, useEffect, useRef, useState } from "react";
 
 interface VideoInfo {
   uploadId: string;
@@ -37,16 +37,14 @@ export default function PlayerPage({
         }
 
         // Fetch video info
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/videos`, {
+        const res = await fetch(`http://localhost:8000/videos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) throw new Error("Failed to fetch video info");
 
         const data = await res.json();
-        const found = data.videos.find(
-          (v: VideoInfo) => v.uploadId === id
-        );
+        const found = data.videos.find((v: VideoInfo) => v.uploadId === id);
 
         if (!found) {
           setError("Video not found");
@@ -60,14 +58,14 @@ export default function PlayerPage({
           setError(
             found.status === "failed"
               ? "Transcoding failed for this video"
-              : "Video is still being transcoded"
+              : "Video is still being transcoded",
           );
           setLoading(false);
           return;
         }
 
         // Build HLS URL through API proxy
-        const hlsUrl = `${process.env.NEXT_PUBLIC_API_URL}/videos/stream/${found.jobId}/master.m3u8`;
+        const hlsUrl = `http://localhost:8000/videos/stream/${found.jobId}/master.m3u8`;
 
         if (!videoRef.current) return;
 
@@ -83,7 +81,7 @@ export default function PlayerPage({
 
           hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
             setLevels(
-              data.levels.map((l) => ({ height: l.height, width: l.width }))
+              data.levels.map((l) => ({ height: l.height, width: l.width })),
             );
             setLoading(false);
           });
@@ -100,7 +98,9 @@ export default function PlayerPage({
           });
 
           hlsRef.current = hls;
-        } else if (videoRef.current.canPlayType("application/vnd.apple.mpegurl")) {
+        } else if (
+          videoRef.current.canPlayType("application/vnd.apple.mpegurl")
+        ) {
           // Safari native HLS
           videoRef.current.src = hlsUrl;
           setLoading(false);

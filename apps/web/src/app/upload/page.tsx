@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 
 type UploadState = "idle" | "uploading" | "completed" | "failed";
 
@@ -33,7 +33,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload`, {
+      const res = await fetch(`http://localhost:8000/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -160,7 +160,8 @@ export default function UploadPage() {
                 Upload successful!
               </p>
               <p className="mb-4 text-xs text-gray-500">
-                Your video is queued for transcoding. Check progress on the videos page.
+                Your video is queued for transcoding. Check progress on the
+                videos page.
               </p>
               <div className="flex gap-3">
                 <Link

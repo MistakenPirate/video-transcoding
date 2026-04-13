@@ -22,7 +22,7 @@ export async function signOut() {
   const refreshToken = c.get("refreshToken")?.value;
 
   if (accessToken) {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+    await fetch(`http://localhost:8000/auth/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -48,7 +48,7 @@ export async function getCurrentUser() {
     if (!accessToken) return null;
   }
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+  const res = await fetch(`http://localhost:8000/auth/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -65,7 +65,7 @@ export async function getCurrentUser() {
     const newToken = await refreshAccessToken();
     if (!newToken) return null;
 
-    const retry = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+    const retry = await fetch(`http://localhost:8000/auth/me`, {
       headers: { Authorization: `Bearer ${newToken}` },
       cache: "no-store",
     });
@@ -85,7 +85,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
   if (!refreshToken) return null;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+  const res = await fetch(`http://localhost:8000/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),

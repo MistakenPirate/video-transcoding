@@ -18,7 +18,7 @@ export async function signIn(formData: FormData) {
 
   const { email, password } = validatedFields.data;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+  const res = await fetch(`http://localhost:8000/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

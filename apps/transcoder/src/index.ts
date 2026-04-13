@@ -1,21 +1,29 @@
 import dotenv from "dotenv";
-import { resolve, join } from "path";
+import { join, resolve } from "path";
 
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
 
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { createWriteStream, readdirSync, unlinkSync, existsSync, mkdirSync, writeFileSync } from "fs";
-import { createVideoWorker } from "@video-transcoding/queue";
 import { db, metaDb } from "@video-transcoding/db";
-import { eq } from "drizzle-orm";
+import { createVideoWorker } from "@video-transcoding/queue";
 import s3Client from "@video-transcoding/s3";
+import { eq } from "drizzle-orm";
 import ffmpeg from "fluent-ffmpeg";
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { pipeline } from "stream/promises";
 
 const BUCKET_NAME = process.env.S3_BUCKET || "uploaded-videos";
 const OUTPUT_BUCKET = process.env.OUTPUT_BUCKET || BUCKET_NAME;
 const TEMP_DIR = process.env.TEMP_DIR || join(__dirname, "../../../temp");
-const OUTPUT_DIR = process.env.OUTPUT_DIR || join(__dirname, "../../../outputs");
+const OUTPUT_DIR =
+  process.env.OUTPUT_DIR || join(__dirname, "../../../outputs");
 
 // Ensure temp and output directories exist
 [TEMP_DIR, OUTPUT_DIR].forEach((dir) => {
@@ -55,7 +63,7 @@ async function downloadFromS3(s3Key: string, localPath: string): Promise<void> {
 
 async function uploadToS3(localPath: string, s3Key: string): Promise<void> {
   const { readFileSync, createReadStream } = await import("fs");
-  
+
   // For small files like m3u8, read synchronously
   if (s3Key.endsWith(".m3u8")) {
     const content = readFileSync(localPath);
@@ -85,7 +93,7 @@ function transcodeToHLS(
   inputPath: string,
   outputDir: string,
   jobId: string,
-  resolution: { name: string; width: number; height: number; bitrate: string }
+  resolution: { name: string; width: number; height: number; bitrate: string },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const outputPath = join(outputDir, resolution.name);
@@ -111,7 +119,9 @@ function transcodeToHLS(
         console.log(`FFmpeg started for ${resolution.name}: ${commandLine}`);
       })
       .on("progress", (progress) => {
-        console.log(`Processing ${resolution.name}: ${progress.percent?.toFixed(2)}% done`);
+        console.log(
+          `Processing ${resolution.name}: ${progress.percent?.toFixed(2)}% done`,
+        );
       })
       .on("end", () => {
         console.log(`Finished transcoding ${resolution.name}`);
@@ -144,7 +154,7 @@ async function cleanupDirectory(dir: string): Promise<void> {
     for (const file of files) {
       const filePath = join(dir, file);
       try {
-        unlinkSync(filePath);
+        rmSync(filePath, { recursive: true, force: true });
       } catch (err) {
         console.warn(`Failed to delete ${filePath}:`, err);
       }
@@ -188,11 +198,18 @@ async function processTranscodeJob(job: any): Promise<void> {
         mkdirSync(resolutionOutputDir, { recursive: true });
       }
 
-      await transcodeToHLS(tempInputPath, outputDir, jobId.toString(), resolution);
+      await transcodeToHLS(
+        tempInputPath,
+        outputDir,
+        jobId.toString(),
+        resolution,
+      );
       completedResolutions++;
 
       // Update progress
-      const progress = Math.round((completedResolutions / totalResolutions) * 90); // 90% for transcoding
+      const progress = Math.round(
+        (completedResolutions / totalResolutions) * 90,
+      ); // 90% for transcoding
       await job.updateProgress(progress);
     }
 
@@ -235,11 +252,12 @@ async function processTranscodeJob(job: any): Promise<void> {
     // Cleanup temporary files
     await cleanupDirectory(outputDir);
     if (existsSync(tempInputPath)) {
-      unlinkSync(tempInputPath);
+      rmSync(tempInputPath, { recursive: true, force: true });
+      console.log(`Deleted directory: ${tempInputPath}`);
     }
   } catch (error) {
     console.error(`Error processing job ${jobId}:`, error);
-    
+
     // Update status to failed
     await db
       .update(metaDb)
@@ -248,7 +266,7 @@ async function processTranscodeJob(job: any): Promise<void> {
 
     // Cleanup on error
     if (existsSync(tempInputPath)) {
-      unlinkSync(tempInputPath);
+      rmSync(tempInputPath, { recursive: true, force: true });
     }
     await cleanupDirectory(outputDir);
 
@@ -289,4 +307,3 @@ process.on("SIGINT", async () => {
 console.log("Transcoder Worker Started...");
 console.log(`Processing jobs from queue: video`);
 console.log(`Concurrency: ${process.env.WORKER_CONCURRENCY || 1}`);
-

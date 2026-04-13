@@ -1,8 +1,8 @@
-import { Router, Request, Response } from "express";
-import { eq, desc } from "drizzle-orm";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { db, metaDb } from "@video-transcoding/db";
 import { s3Client } from "@video-transcoding/s3";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { desc, eq } from "drizzle-orm";
+import { Request, Response, Router } from "express";
 
 const router = Router();
 
@@ -39,7 +39,8 @@ router.get("/stream/:jobId/*path", async (req: Request, res: Response) => {
   }
 
   const s3Key = `videos/${jobId}/${filePath}`;
-  const bucket = process.env.OUTPUT_BUCKET || process.env.S3_BUCKET || "uploaded-videos";
+  const bucket =
+    process.env.OUTPUT_BUCKET || process.env.S3_BUCKET || "uploaded-videos";
 
   try {
     const command = new GetObjectCommand({
@@ -63,7 +64,7 @@ router.get("/stream/:jobId/*path", async (req: Request, res: Response) => {
     const stream = response.Body as NodeJS.ReadableStream;
     stream.pipe(res);
   } catch (error: any) {
-    if (error.name === "NoSuchKey" || error.$metadata?.httpStatusCode === 404) {
+    if (error.name === "NoSuchKey" || error.$metadata?.httptatusCode === 404) {
       return res.status(404).json({ error: "File not found" });
     }
     console.error("Stream error:", error);
