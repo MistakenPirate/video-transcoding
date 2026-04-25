@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 type UploadState = "idle" | "uploading" | "completed" | "failed";
 
@@ -9,6 +11,7 @@ export default function UploadPage() {
   const [state, setState] = useState<UploadState>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function getAccessToken(): Promise<string | null> {
@@ -60,57 +63,93 @@ export default function UploadPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type.startsWith("video/")) {
+      setFile(droppedFile);
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link
-            href="/dashboard"
-            className="text-xl font-bold text-gray-900 hover:text-gray-700"
-          >
-            Video Transcoder
-          </Link>
-        </div>
-      </nav>
+    <div className="bg-rf-surface text-rf-on-surface font-[family-name:var(--font-inter)] min-h-screen flex flex-col relative">
+      <div className="fixed inset-0 dot-grid pointer-events-none" />
 
-      <main className="mx-auto max-w-2xl px-6 py-12">
-        <h2 className="mb-8 text-2xl font-semibold text-gray-900">
-          Upload a Video
-        </h2>
+      <Header activeLink="upload" />
 
-        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+      {/* Main */}
+      <main className="flex-grow w-full max-w-[1440px] mx-auto px-8 py-12 flex flex-col items-center justify-center relative z-10">
+        <div className="w-full max-w-3xl bg-rf-surface-container-high border border-rf-primary rotate-[1deg] hover:rotate-0 transition-transform duration-300 p-8 relative">
+          {/* Corner Accents */}
+          <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-rf-tertiary border border-rf-primary rotate-45" />
+          <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-rf-tertiary border border-rf-primary rotate-45" />
+
+          <div className="mb-8 border-b-2 border-dashed border-rf-primary pb-4">
+            <h1 className="font-[family-name:var(--font-space-grotesk)] text-5xl font-bold text-rf-primary uppercase tracking-tighter leading-tight">
+              Upload a Video
+            </h1>
+            <p className="text-rf-secondary mt-2">
+              Select a raw file for processing and transcoding onto the global
+              timeline.
+            </p>
+          </div>
+
           {state === "idle" && (
             <>
+              {/* Dropzone */}
               <div
-                className="mb-6 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-12 transition hover:border-blue-400 hover:bg-blue-50/50"
+                className={`w-full h-80 border-2 border-dashed border-rf-primary flex flex-col items-center justify-center cursor-pointer mb-8 relative group overflow-hidden transition-all ${
+                  isDragging
+                    ? "bg-rf-surface-container border-solid"
+                    : "bg-rf-surface hover:bg-rf-surface-container hover:border-solid"
+                }`}
                 onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="mb-3 h-10 w-10 text-gray-400"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
-                  />
-                </svg>
-                {file ? (
-                  <p className="text-sm font-medium text-gray-700">
-                    {file.name}{" "}
-                    <span className="text-gray-400">
-                      ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                <div className="relative z-10 flex flex-col items-center text-center p-6 bg-rf-surface border border-rf-primary">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-12 h-12 text-rf-primary mb-4"
+                  >
+                    <path d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                  </svg>
+                  {file ? (
+                    <span className="font-[family-name:var(--font-space-grotesk)] text-2xl font-semibold text-rf-primary uppercase block mb-2">
+                      {file.name}{" "}
+                      <span className="text-rf-secondary text-base">
+                        ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                      </span>
                     </span>
-                  </p>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    Click to select a video file
-                  </p>
-                )}
+                  ) : (
+                    <>
+                      <span className="font-[family-name:var(--font-space-grotesk)] text-2xl font-semibold text-rf-primary uppercase block mb-2">
+                        Click to select a video file
+                      </span>
+                      <span className="text-rf-secondary block">
+                        or drag and drop onto the drafting board
+                      </span>
+                    </>
+                  )}
+                  <div className="mt-4 flex gap-2">
+                    <span className="font-[family-name:var(--font-space-grotesk)] text-[11px] font-medium tracking-[0.2em] bg-rf-surface-container-high border border-rf-primary px-2 py-1 text-rf-primary">
+                      .MP4
+                    </span>
+                    <span className="font-[family-name:var(--font-space-grotesk)] text-[11px] font-medium tracking-[0.2em] bg-rf-surface-container-high border border-rf-primary px-2 py-1 text-rf-primary">
+                      .MOV
+                    </span>
+                    <span className="font-[family-name:var(--font-space-grotesk)] text-[11px] font-medium tracking-[0.2em] bg-rf-surface-container-high border border-rf-primary px-2 py-1 text-rf-primary">
+                      .RAW
+                    </span>
+                  </div>
+                </div>
               </div>
               <input
                 ref={fileRef}
@@ -119,35 +158,48 @@ export default function UploadPage() {
                 className="hidden"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
               />
-              <button
-                onClick={handleUpload}
-                disabled={!file}
-                className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Upload &amp; Transcode
-              </button>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-4 border-t border-rf-primary pt-6">
+                <Link
+                  href="/dashboard"
+                  className="bg-rf-surface border-double border-4 border-rf-primary text-rf-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 active:translate-y-0.5 transition-transform hover:bg-rf-surface-container"
+                >
+                  Cancel
+                </Link>
+                <button
+                  onClick={handleUpload}
+                  disabled={!file}
+                  className="bg-rf-primary text-rf-on-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 active:translate-y-0.5 transition-all hover:border-b-4 hover:border-rf-tertiary border border-rf-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Upload &amp; Transcode
+                </button>
+              </div>
             </>
           )}
 
           {state === "uploading" && (
-            <div className="flex flex-col items-center py-8">
-              <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-              <p className="text-sm font-medium text-gray-700">
+            <div className="flex flex-col items-center py-16">
+              <div className="mb-6 w-10 h-10 border-2 border-rf-primary border-t-rf-tertiary animate-spin" />
+              <p className="font-[family-name:var(--font-space-grotesk)] text-lg font-semibold text-rf-primary uppercase tracking-wider">
                 Uploading video...
+              </p>
+              <p className="text-rf-secondary text-sm mt-2">
+                Transferring to processing pipeline
               </p>
             </div>
           )}
 
           {state === "completed" && (
-            <div className="flex flex-col items-center py-8">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+            <div className="flex flex-col items-center py-16">
+              <div className="mb-6 w-14 h-14 bg-rf-tertiary-fixed border-2 border-rf-primary flex items-center justify-center rotate-45">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   stroke="currentColor"
-                  className="h-6 w-6"
+                  className="w-7 h-7 text-rf-primary -rotate-45"
                 >
                   <path
                     strokeLinecap="round"
@@ -156,23 +208,23 @@ export default function UploadPage() {
                   />
                 </svg>
               </div>
-              <p className="mb-2 text-sm font-medium text-gray-700">
-                Upload successful!
+              <p className="font-[family-name:var(--font-space-grotesk)] text-lg font-semibold text-rf-primary uppercase tracking-wider mb-2">
+                Upload successful
               </p>
-              <p className="mb-4 text-xs text-gray-500">
+              <p className="text-rf-secondary text-sm mb-8">
                 Your video is queued for transcoding. Check progress on the
                 videos page.
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <Link
                   href="/watch"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="bg-rf-primary text-rf-on-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 active:translate-y-0.5 transition-all hover:border-b-4 hover:border-rf-tertiary border border-rf-primary"
                 >
                   View Videos
                 </Link>
                 <button
                   onClick={reset}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="bg-rf-surface border-double border-4 border-rf-primary text-rf-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 active:translate-y-0.5 transition-transform hover:bg-rf-surface-container"
                 >
                   Upload Another
                 </button>
@@ -181,15 +233,15 @@ export default function UploadPage() {
           )}
 
           {state === "failed" && (
-            <div className="flex flex-col items-center py-8">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <div className="flex flex-col items-center py-16">
+              <div className="mb-6 w-14 h-14 bg-red-100 border-2 border-red-600 flex items-center justify-center rotate-45">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   stroke="currentColor"
-                  className="h-6 w-6"
+                  className="w-7 h-7 text-red-600 -rotate-45"
                 >
                   <path
                     strokeLinecap="round"
@@ -198,12 +250,12 @@ export default function UploadPage() {
                   />
                 </svg>
               </div>
-              <p className="mb-1 text-sm font-medium text-red-600">
+              <p className="font-[family-name:var(--font-space-grotesk)] text-lg font-semibold text-red-600 uppercase tracking-wider mb-2">
                 {error || "Something went wrong"}
               </p>
               <button
                 onClick={reset}
-                className="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="mt-4 bg-rf-surface border-double border-4 border-rf-primary text-rf-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 active:translate-y-0.5 transition-transform hover:bg-rf-surface-container"
               >
                 Try Again
               </button>
@@ -211,6 +263,8 @@ export default function UploadPage() {
           )}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

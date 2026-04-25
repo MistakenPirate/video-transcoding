@@ -1,53 +1,58 @@
 import Link from "next/link";
+import Footer from "@/components/Footer";
+import { getCurrentUser, signOut } from "./auth/actions";
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
   return (
     <div className="bg-rf-surface text-rf-on-surface font-[family-name:var(--font-inter)] selection:bg-rf-tertiary-fixed selection:text-rf-on-tertiary-fixed">
       <div className="fixed inset-0 dot-grid pointer-events-none" />
 
       {/* Header */}
       <header className="bg-rf-surface border-b-2 border-rf-primary/20 sticky top-0 z-50">
-        <nav className="flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto">
-          <div className="flex items-center gap-8">
-            <span className="text-3xl font-bold text-rf-primary italic font-[family-name:var(--font-space-grotesk)] tracking-tight">
-              RF
-            </span>
-            <div className="hidden md:flex gap-6 items-center font-[family-name:var(--font-space-grotesk)]">
-              <Link
-                href="/dashboard"
-                className="tracking-tight text-rf-primary border-b-2 border-rf-tertiary pb-1 hover:underline decoration-rf-tertiary decoration-2 underline-offset-4 transition-all"
-              >
-                Projects
-              </Link>
-              <Link
-                href="/upload"
-                className="tracking-tight text-rf-secondary hover:text-rf-primary transition-colors hover:underline decoration-rf-tertiary decoration-2 underline-offset-4"
-              >
-                Transcode
-              </Link>
-              <Link
-                href="/dashboard"
-                className="tracking-tight text-rf-secondary hover:text-rf-primary transition-colors hover:underline decoration-rf-tertiary decoration-2 underline-offset-4"
-              >
-                Settings
-              </Link>
-            </div>
-          </div>
+        <div className="flex justify-between items-center px-8 h-20 w-full max-w-[1440px] mx-auto">
+          <Link
+            href="/"
+            className="text-2xl font-[family-name:var(--font-space-grotesk)] font-bold tracking-widest text-rf-primary uppercase"
+          >
+            ReelFlow
+          </Link>
           <div className="flex items-center gap-4">
-            <Link
-              href="/signin"
-              className="font-[family-name:var(--font-space-grotesk)] text-rf-secondary hover:text-rf-primary transition-colors text-sm"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="bg-rf-primary text-rf-on-primary px-4 py-2 font-[family-name:var(--font-space-grotesk)] font-bold text-sm hover:opacity-90 transition-opacity"
-            >
-              Get Started
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="bg-rf-primary text-rf-on-primary px-6 py-2.5 font-[family-name:var(--font-space-grotesk)] font-bold text-sm uppercase tracking-tighter hover:opacity-90 transition-opacity"
+                >
+                  Dashboard
+                </Link>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="font-[family-name:var(--font-space-grotesk)] uppercase tracking-tighter text-sm font-bold text-rf-secondary hover:text-rf-primary transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/signin"
+                  className="font-[family-name:var(--font-space-grotesk)] uppercase tracking-tighter text-sm font-bold text-rf-secondary hover:text-rf-primary transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="bg-rf-primary text-rf-on-primary px-6 py-2.5 font-[family-name:var(--font-space-grotesk)] font-bold text-sm uppercase tracking-tighter hover:opacity-90 transition-opacity"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
-        </nav>
+        </div>
       </header>
 
       <main className="relative z-10">
@@ -69,18 +74,37 @@ export default function Home() {
               of architectural integrity.
             </p>
             <div className="flex gap-6 pt-4 flex-wrap">
-              <Link
-                href="/signup"
-                className="bg-rf-primary text-rf-on-primary px-8 py-4 font-[family-name:var(--font-space-grotesk)] font-bold text-lg hover:underline decoration-rf-tertiary decoration-4 underline-offset-8 transition-all active:translate-y-0.5"
-              >
-                Start New Project
-              </Link>
-              <Link
-                href="/dashboard"
-                className="border-2 border-rf-primary text-rf-primary px-8 py-4 font-[family-name:var(--font-space-grotesk)] font-bold text-lg hover:bg-rf-surface-container-low transition-all"
-              >
-                View Documentation
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="bg-rf-primary text-rf-on-primary px-8 py-4 font-[family-name:var(--font-space-grotesk)] font-bold text-lg hover:underline decoration-rf-tertiary decoration-4 underline-offset-8 transition-all active:translate-y-0.5"
+                  >
+                    Go to Dashboard
+                  </Link>
+                  <Link
+                    href="/upload"
+                    className="border-2 border-rf-primary text-rf-primary px-8 py-4 font-[family-name:var(--font-space-grotesk)] font-bold text-lg hover:bg-rf-surface-container-low transition-all"
+                  >
+                    Upload a Video
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/signup"
+                    className="bg-rf-primary text-rf-on-primary px-8 py-4 font-[family-name:var(--font-space-grotesk)] font-bold text-lg hover:underline decoration-rf-tertiary decoration-4 underline-offset-8 transition-all active:translate-y-0.5"
+                  >
+                    Get Started
+                  </Link>
+                  <Link
+                    href="/signin"
+                    className="border-2 border-rf-primary text-rf-primary px-8 py-4 font-[family-name:var(--font-space-grotesk)] font-bold text-lg hover:bg-rf-surface-container-low transition-all"
+                  >
+                    Sign In
+                  </Link>
+                </>
+              )}
             </div>
           </div>
           <div className="col-span-12 md:col-span-6 relative">
@@ -457,39 +481,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-rf-surface border-t-4 border-double border-rf-secondary/10 py-12">
-        <div className="flex flex-col md:flex-row justify-between items-center px-12 gap-6 max-w-[1440px] mx-auto">
-          <div className="flex flex-col gap-2 items-center md:items-start">
-            <span className="text-xl font-[family-name:var(--font-space-grotesk)] font-bold text-rf-primary italic">
-              ReelFlow
-            </span>
-            <p className="font-[family-name:var(--font-space-grotesk)] text-sm uppercase tracking-widest text-rf-secondary">
-              &copy; 2025 ReelFlow - Drafted by Hand
-            </p>
-          </div>
-          <div className="flex gap-8">
-            <a
-              href="#"
-              className="font-[family-name:var(--font-space-grotesk)] text-sm uppercase tracking-widest text-rf-secondary hover:text-rf-tertiary transition-colors"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="#"
-              className="font-[family-name:var(--font-space-grotesk)] text-sm uppercase tracking-widest text-rf-secondary hover:text-rf-tertiary transition-colors"
-            >
-              Technical Specs
-            </a>
-            <a
-              href="#"
-              className="font-[family-name:var(--font-space-grotesk)] text-sm uppercase tracking-widest text-rf-secondary hover:text-rf-tertiary transition-colors"
-            >
-              Contact Studio
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
