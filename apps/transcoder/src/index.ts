@@ -140,6 +140,9 @@ function transcodeToHLS(
       .audioBitrate("128k")
       .format("hls")
       .outputOptions([
+        "-pix_fmt yuv420p",
+        "-profile:v baseline",
+        "-level 3.1",
         "-hls_time 10",
         "-hls_list_size 0",
         "-hls_segment_filename",
