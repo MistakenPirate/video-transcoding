@@ -2,14 +2,14 @@ import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useAuth } from '@/contexts/auth-context';
-import { useThemeContext } from '@/contexts/theme-context';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuthStore } from '@/stores/auth-store';
+import { useThemeStore } from '@/stores/theme-store';
 
 export default function AppLayout() {
   const theme = useTheme();
-  const { theme: themeMode, toggleTheme } = useThemeContext();
-  const { signOut } = useAuth();
+  const signOut = useAuthStore((s) => s.signOut);
+  const { theme: themeMode, toggleTheme } = useThemeStore();
   const router = useRouter();
 
   const handleSignOut = async () => {

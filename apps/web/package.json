@@ -9,18 +9,20 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.5",
     "hls.js": "^1.6.15",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@video-transcoding/typescript-config": "workspace:*",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@video-transcoding/typescript-config": "workspace:*",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

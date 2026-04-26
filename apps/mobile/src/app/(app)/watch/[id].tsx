@@ -1,6 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -23,38 +24,30 @@ const QUALITIES = [
 export default function WatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const [video, setVideo] = useState<Video | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [selectedQuality, setSelectedQuality] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await apiFetch<{ videos: Video[] }>('/videos');
-        const found = data.videos.find((v) => v.uploadId === id);
-        if (!found) {
-          setError('Video not found');
-          return;
-        }
-        if (found.status !== 'completed' || !found.jobId) {
-          setError('Video is not ready for playback');
-          return;
-        }
-        setVideo(found);
-        setJobId(found.jobId);
-        const tokens = await getTokens();
-        setToken(tokens?.accessToken ?? null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load video');
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['video', id],
+    queryFn: async () => {
+      const [videosData, tokens] = await Promise.all([
+        apiFetch<{ videos: Video[] }>('/videos'),
+        getTokens(),
+      ]);
+      const found = videosData.videos.find((v) => v.uploadId === id);
+      if (!found) throw new Error('Video not found');
+      if (found.status !== 'completed' || !found.jobId) {
+        throw new Error('Video is not ready for playback');
       }
-    })();
-  }, [id]);
+      return { video: found, token: tokens?.accessToken ?? null };
+    },
+  });
+
+  const video = data?.video ?? null;
+  const token = data?.token ?? null;
 
   const hlsUrl =
-    jobId && token
-      ? `${API_URL}/videos/stream/${jobId}/${QUALITIES[selectedQuality].path}`
+    video?.jobId && token
+      ? `${API_URL}/videos/stream/${video.jobId}/${QUALITIES[selectedQuality].path}`
       : null;
 
   const player = useVideoPlayer(
@@ -73,12 +66,12 @@ export default function WatchScreen() {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <Text style={[styles.diamond, { color: theme.accent }]}>{'\u25C6'}</Text>
-        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+        <Text style={[styles.errorText, { color: theme.error }]}>{error.message}</Text>
       </View>
     );
   }
 
-  if (!hlsUrl || !token) {
+  if (isLoading || !hlsUrl || !token) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />

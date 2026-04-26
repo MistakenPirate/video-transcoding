@@ -3,13 +3,13 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TextInput } from '@/components/text-input';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuthStore } from '@/stores/auth-store';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/services/api';
 
 export default function SignInScreen() {
   const theme = useTheme();
-  const { signIn } = useAuth();
+  const signIn = useAuthStore((s) => s.signIn);
   const router = useRouter();
 
   const [email, setEmail] = useState('');

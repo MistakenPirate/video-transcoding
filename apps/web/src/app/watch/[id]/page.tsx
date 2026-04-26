@@ -1,9 +1,11 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Hls from "hls.js";
 import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
 import Footer from "@/components/Footer";
+import { apiFetch, getAccessToken } from "@/lib/api";
 
 interface VideoInfo {
   uploadId: string;
@@ -20,106 +22,83 @@ export default function PlayerPage({
   const { id } = use(params);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
-  const [video, setVideo] = useState<VideoInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentLevel, setCurrentLevel] = useState(-1);
   const [levels, setLevels] = useState<{ height: number; width: number }[]>([]);
+  const [playerError, setPlayerError] = useState<string | null>(null);
+
+  const { data, isLoading, error: queryError } = useQuery({
+    queryKey: ["video", id],
+    queryFn: async () => {
+      const res = await apiFetch<{ videos: VideoInfo[] }>("/videos");
+      const found = res.videos.find((v) => v.uploadId === id);
+      if (!found) throw new Error("Video not found");
+      return found;
+    },
+  });
+
+  const video = data ?? null;
+  const loading = isLoading;
+  const error =
+    queryError?.message ??
+    playerError ??
+    (video && video.status !== "completed"
+      ? video.status === "failed"
+        ? "Transcoding failed for this video"
+        : "Video is still being transcoded"
+      : null);
 
   useEffect(() => {
-    async function loadVideo() {
-      try {
-        const match = document.cookie.match(/(?:^|; )accessToken=([^;]*)/);
-        const token = match ? decodeURIComponent(match[1]) : null;
-        if (!token) {
-          setError("Not authenticated");
-          setLoading(false);
-          return;
+    if (!video || video.status !== "completed" || !video.jobId) return;
+    if (!videoRef.current) return;
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const hlsUrl = `${API_URL}/videos/stream/${video.jobId}/master.m3u8`;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        xhrSetup: (xhr) => {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        },
+      });
+
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(videoRef.current);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        setLevels(
+          data.levels.map((l) => ({ height: l.height, width: l.width })),
+        );
+      });
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        setCurrentLevel(data.level);
+      });
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          setPlayerError("Playback error. The video may not be available yet.");
         }
+      });
 
-        const res = await fetch(`http://localhost:8000/videos`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch video info");
-
-        const data = await res.json();
-        const found = data.videos.find((v: VideoInfo) => v.uploadId === id);
-
-        if (!found) {
-          setError("Video not found");
-          setLoading(false);
-          return;
-        }
-
-        setVideo(found);
-
-        if (found.status !== "completed" || !found.jobId) {
-          setError(
-            found.status === "failed"
-              ? "Transcoding failed for this video"
-              : "Video is still being transcoded",
-          );
-          setLoading(false);
-          return;
-        }
-
-        const hlsUrl = `http://localhost:8000/videos/stream/${found.jobId}/master.m3u8`;
-
-        if (!videoRef.current) return;
-
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            xhrSetup: (xhr) => {
-              xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-            },
-          });
-
-          hls.loadSource(hlsUrl);
-          hls.attachMedia(videoRef.current);
-
-          hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-            setLevels(
-              data.levels.map((l) => ({ height: l.height, width: l.width })),
-            );
-            setLoading(false);
-          });
-
-          hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-            setCurrentLevel(data.level);
-          });
-
-          hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              setError("Playback error. The video may not be available yet.");
-              setLoading(false);
-            }
-          });
-
-          hlsRef.current = hls;
-        } else if (
-          videoRef.current.canPlayType("application/vnd.apple.mpegurl")
-        ) {
-          videoRef.current.src = hlsUrl;
-          setLoading(false);
-        } else {
-          setError("HLS playback is not supported in this browser");
-          setLoading(false);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load video");
-        setLoading(false);
-      }
+      hlsRef.current = hls;
+    } else if (
+      videoRef.current.canPlayType("application/vnd.apple.mpegurl")
+    ) {
+      videoRef.current.src = hlsUrl;
+    } else {
+      setPlayerError("HLS playback is not supported in this browser");
     }
-
-    loadVideo();
 
     return () => {
       if (hlsRef.current) {
         hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     };
-  }, [id]);
+  }, [video]);
 
   function switchQuality(levelIndex: number) {
     if (!hlsRef.current) return;

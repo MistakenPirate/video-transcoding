@@ -1,10 +1,12 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import Hls from "hls.js";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { apiFetch, getAccessToken } from "@/lib/api";
 
 interface Video {
   uploadId: string;
@@ -22,11 +24,10 @@ function VideoThumbnail({ jobId }: { jobId: string }) {
     const video = videoRef.current;
     if (!video) return;
 
-    const match = document.cookie.match(/(?:^|; )accessToken=([^;]*)/);
-    const token = match ? decodeURIComponent(match[1]) : null;
+    const token = getAccessToken();
     if (!token) return;
 
-    const hlsUrl = `http://localhost:8000/videos/stream/${jobId}/master.m3u8`;
+    const hlsUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/videos/stream/${jobId}/master.m3u8`;
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -104,38 +105,13 @@ function getStatusBadge(status: string) {
 }
 
 export default function WatchPage() {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ["videos"],
+    queryFn: () => apiFetch<{ videos: Video[] }>("/videos"),
+  });
 
-  useEffect(() => {
-    async function fetchVideos() {
-      try {
-        const match = document.cookie.match(/(?:^|; )accessToken=([^;]*)/);
-        const token = match ? decodeURIComponent(match[1]) : null;
-        if (!token) {
-          setError("Not authenticated");
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch(`http://localhost:8000/videos`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch videos");
-
-        const data = await res.json();
-        setVideos(data.videos);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load videos");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchVideos();
-  }, []);
+  const videos = data?.videos ?? [];
+  const error = queryError?.message ?? null;
 
   return (
     <div className="bg-rf-surface text-rf-on-surface font-[family-name:var(--font-inter)] min-h-screen flex flex-col relative">

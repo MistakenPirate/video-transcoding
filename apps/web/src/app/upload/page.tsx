@@ -1,46 +1,29 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
-type UploadState = "idle" | "uploading" | "completed" | "failed";
+import { getAccessToken } from "@/lib/api";
 
 export default function UploadPage() {
-  const [state, setState] = useState<UploadState>("idle");
   const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function getAccessToken(): Promise<string | null> {
-    const match = document.cookie.match(/(?:^|; )accessToken=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : null;
-  }
-
-  async function handleUpload() {
-    if (!file) return;
-
-    setState("uploading");
-    setError(null);
-
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        setError("Not authenticated. Please sign in again.");
-        setState("failed");
-        return;
-      }
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const token = getAccessToken();
+      if (!token) throw new Error("Not authenticated. Please sign in again.");
 
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`http://localhost:8000/upload`, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/upload`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
@@ -49,17 +32,27 @@ export default function UploadPage() {
         throw new Error(err.error || "Upload failed");
       }
 
-      setState("completed");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-      setState("failed");
-    }
+      return res.json();
+    },
+  });
+
+  const state = uploadMutation.isPending
+    ? "uploading"
+    : uploadMutation.isSuccess
+      ? "completed"
+      : uploadMutation.isError
+        ? "failed"
+        : "idle";
+  const error = uploadMutation.error?.message ?? null;
+
+  function handleUpload() {
+    if (!file) return;
+    uploadMutation.mutate(file);
   }
 
   function reset() {
-    setState("idle");
+    uploadMutation.reset();
     setFile(null);
-    setError(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 

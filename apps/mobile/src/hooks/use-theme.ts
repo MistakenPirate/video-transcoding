@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/theme';
-import { useThemeContext } from '@/contexts/theme-context';
+import { useThemeStore } from '@/stores/theme-store';
 
 export function useTheme() {
-  const { theme } = useThemeContext();
+  const theme = useThemeStore((s) => s.theme);
   return Colors[theme];
 }
