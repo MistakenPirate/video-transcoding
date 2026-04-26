@@ -5,8 +5,18 @@ import { redirect } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+function decodeJwtPayload(token: string) {
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
+
 export async function requireAuth() {
-  return await getCurrentUser();
+  const user = await getCurrentUser();
+  if (!user) redirect("/signin");
+  return user;
 }
 
 export async function signOut() {
@@ -41,19 +51,8 @@ export async function getCurrentUser() {
   const accessToken = c.get("accessToken")?.value;
   if (!accessToken) return null;
 
-  try {
-    const res = await fetch(`${API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: "no-store",
-    });
+  const payload = decodeJwtPayload(accessToken);
+  if (!payload?.userId || !payload?.email) return null;
 
-    if (res.ok) {
-      const data = await res.json();
-      return data.user;
-    }
-  } catch {
-    // API unreachable — don't crash the page
-  }
-
-  return null;
+  return { userId: payload.userId, email: payload.email };
 }

@@ -6,6 +6,25 @@ import type { TokenPair } from '@/types/api';
 const ACCESS_TOKEN_KEY = 'reelflow_access_token';
 const REFRESH_TOKEN_KEY = 'reelflow_refresh_token';
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return !payload.exp || payload.exp * 1000 < Date.now() + 10_000;
+  } catch {
+    return true;
+  }
+}
+
+export function decodeAccessToken(token: string) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (!payload.userId || !payload.email) return null;
+    return { userId: payload.userId, email: payload.email };
+  } catch {
+    return null;
+  }
+}
+
 export async function getTokens(): Promise<TokenPair | null> {
   const [accessToken, refreshToken] = await Promise.all([
     SecureStore.getItemAsync(ACCESS_TOKEN_KEY),
@@ -68,7 +87,13 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const tokens = await getTokens();
+  let tokens = await getTokens();
+
+  // Proactively refresh if access token is expired, avoids a wasted 401 round-trip
+  if (tokens && isTokenExpired(tokens.accessToken)) {
+    const newTokens = await refreshTokens();
+    tokens = newTokens ? { accessToken: newTokens.accessToken, refreshToken: newTokens.refreshToken } : null;
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -81,6 +106,7 @@ export async function apiFetch<T>(
 
   let res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
+  // Fallback: if still 401 (e.g. token revoked server-side), try refresh once more
   if (res.status === 401 && tokens?.refreshToken) {
     const newTokens = await refreshTokens();
     if (newTokens) {

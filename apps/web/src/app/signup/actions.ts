@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { signUpSchema } from "./validation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export async function signUp(formData: FormData) {
   const validatedFields = signUpSchema.safeParse({
     email: formData.get("email"),
@@ -19,7 +21,7 @@ export async function signUp(formData: FormData) {
 
   const { email, password } = validatedFields.data;
 
-  const res = await fetch(`http://localhost:8000/auth/register`, {
+  const res = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

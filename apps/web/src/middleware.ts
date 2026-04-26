@@ -41,9 +41,14 @@ export async function middleware(request: NextRequest) {
           ? NextResponse.redirect(new URL("/dashboard", request.url))
           : NextResponse.next();
 
-        response.cookies.set("accessToken", tokens.accessToken, { path: "/" });
+        response.cookies.set("accessToken", tokens.accessToken, {
+          httpOnly: false,
+          sameSite: "lax",
+          path: "/",
+        });
         response.cookies.set("refreshToken", tokens.refreshToken, {
           httpOnly: true,
+          sameSite: "lax",
           path: "/",
         });
         return response;

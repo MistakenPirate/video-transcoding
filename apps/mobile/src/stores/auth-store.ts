@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { apiFetch, clearTokens, getTokens, setTokens } from '@/services/api';
+import { apiFetch, clearTokens, decodeAccessToken, getTokens, setTokens } from '@/services/api';
 import type { AuthResponse, User } from '@/types/api';
 
 interface AuthState {
@@ -21,8 +21,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const tokens = await getTokens();
       if (!tokens) return;
-      const data = await apiFetch<{ user: User }>('/auth/me');
-      set({ user: data.user, isAuthenticated: true });
+      const user = decodeAccessToken(tokens.accessToken);
+      if (!user) {
+        await clearTokens();
+        return;
+      }
+      set({ user, isAuthenticated: true });
     } catch {
       await clearTokens();
     } finally {

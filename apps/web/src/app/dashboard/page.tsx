@@ -1,14 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { requireAuth, signOut } from "../auth/actions";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 export default async function Dashboard() {
   const user = await requireAuth();
-  if (!user) {
-    redirect("/signin");
-  }
 
   return (
     <div className="bg-rf-surface text-rf-on-surface font-[family-name:var(--font-inter)] min-h-screen flex flex-col relative">

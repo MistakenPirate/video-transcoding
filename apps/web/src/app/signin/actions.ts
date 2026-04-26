@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { signInSchema } from "./validation";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 export async function signIn(formData: FormData) {
   const validatedFields = signInSchema.safeParse({
     email: formData.get("email"),
@@ -18,7 +20,7 @@ export async function signIn(formData: FormData) {
 
   const { email, password } = validatedFields.data;
 
-  const res = await fetch(`http://localhost:8000/auth/login`, {
+  const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
