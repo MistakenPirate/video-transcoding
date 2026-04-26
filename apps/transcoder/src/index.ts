@@ -170,6 +170,27 @@ function transcodeToHLS(
   });
 }
 
+function generateThumbnail(inputPath: string, outputDir: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const thumbnailPath = join(outputDir, "thumbnail.jpg");
+    ffmpeg(inputPath)
+      .screenshots({
+        timestamps: [2],
+        filename: "thumbnail.jpg",
+        folder: outputDir,
+        size: "640x360",
+      })
+      .on("end", () => {
+        console.log("Thumbnail generated");
+        resolve();
+      })
+      .on("error", (err) => {
+        console.error("Thumbnail error:", err);
+        reject(err);
+      });
+  });
+}
+
 function createMasterPlaylist(outputDir: string, jobId: string): string {
   const playlists = RESOLUTIONS.map((res) => {
     return `#EXT-X-STREAM-INF:BANDWIDTH=${res.bitrate.replace("k", "000")},RESOLUTION=${res.width}x${res.height}\n${res.name}/index.m3u8`;
@@ -247,6 +268,11 @@ async function processTranscodeJob(job: any): Promise<void> {
       ); // 90% for transcoding
       await job.updateProgress(progress);
     }
+
+    // Generate thumbnail
+    console.log("Generating thumbnail...");
+    await generateThumbnail(tempInputPath, outputDir);
+    await uploadToS3(join(outputDir, "thumbnail.jpg"), `videos/${jobId}/thumbnail.jpg`);
 
     // Upload HLS files to S3
     console.log("Uploading HLS files to S3...");
