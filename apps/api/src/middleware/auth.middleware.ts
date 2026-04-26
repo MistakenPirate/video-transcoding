@@ -12,19 +12,23 @@ export function authenticate(
   }
 
   const authHeader = req.headers.authorization;
+  const queryToken = req.query.token as string | undefined;
 
-  if (!authHeader) {
-    res.status(401).json({ error: "Authorization header required" });
-    return;
+  let token: string | undefined;
+
+  if (authHeader) {
+    const parts = authHeader.split(" ");
+    if (parts.length === 2 && parts[0] === "Bearer") {
+      token = parts[1];
+    }
+  } else if (queryToken) {
+    token = queryToken;
   }
 
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer") {
-    res.status(401).json({ error: "Invalid authorization format. Use: Bearer <token>" });
+  if (!token) {
+    res.status(401).json({ error: "Authorization required" });
     return;
   }
-
-  const token = parts[1];
   const payload = verifyAccessToken(token);
 
   if (!payload) {

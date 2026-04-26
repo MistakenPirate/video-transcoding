@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { VideoCard } from '@/components/video-card';
@@ -13,9 +13,13 @@ export default function VideoLibraryScreen() {
   const { videos, loading, error, refreshing, refresh } = useVideos();
   const [token, setToken] = useState<string | null>(null);
 
-  useEffect(() => {
+  const refreshToken = useCallback(() => {
     getTokens().then((t) => setToken(t?.accessToken ?? null));
   }, []);
+
+  useEffect(() => {
+    refreshToken();
+  }, [refreshToken]);
 
   if (loading) {
     return (
@@ -39,7 +43,7 @@ export default function VideoLibraryScreen() {
         )}
         contentContainerStyle={styles.list}
         refreshing={refreshing}
-        onRefresh={refresh}
+        onRefresh={() => { refresh(); refreshToken(); }}
         ListHeaderComponent={
           <Text style={[styles.header, { color: theme.textSecondary }]}>
             YOUR VIDEOS

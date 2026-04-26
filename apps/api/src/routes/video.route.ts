@@ -55,6 +55,10 @@ router.get("/stream/:jobId/*path", async (req: Request, res: Response) => {
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
     } else if (filePath.endsWith(".ts")) {
       res.setHeader("Content-Type", "video/mp2t");
+    } else if (filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) {
+      res.setHeader("Content-Type", "image/jpeg");
+    } else if (filePath.endsWith(".png")) {
+      res.setHeader("Content-Type", "image/png");
     }
 
     res.setHeader("Access-Control-Allow-Origin", "*");

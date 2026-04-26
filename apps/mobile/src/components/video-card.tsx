@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StatusBadge } from '@/components/status-badge';
@@ -16,7 +16,8 @@ export function VideoCard({ video, token, onPress }: Props) {
   const theme = useTheme();
   const isPlayable = video.status === 'completed';
   const date = new Date(video.uploadedAt).toLocaleDateString();
-  const hasThumbnail = isPlayable && video.jobId && token;
+  const [thumbError, setThumbError] = useState(false);
+  const hasThumbnail = isPlayable && video.jobId && token && !thumbError;
 
   return (
     <Pressable
@@ -34,11 +35,11 @@ export function VideoCard({ video, token, onPress }: Props) {
       {hasThumbnail ? (
         <Image
           source={{
-            uri: `${API_URL}/videos/stream/${video.jobId}/thumbnail.jpg`,
-            headers: { Authorization: `Bearer ${token}` },
+            uri: `${API_URL}/videos/stream/${video.jobId}/thumbnail.jpg?token=${token}`,
           }}
           style={styles.thumbnail}
           resizeMode="cover"
+          onError={() => setThumbError(true)}
         />
       ) : (
         <View style={[styles.thumbnailPlaceholder, { backgroundColor: theme.backgroundSelected }]}>
