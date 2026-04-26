@@ -1,25 +1,19 @@
 "use server";
 
-import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const API_URL = "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function requireAuth() {
-  return await getCurrentUser(); // no redirect here
-}
-
-function clearAuthCookies(c: ReadonlyRequestCookies) {
-  c.delete("accessToken");
-  c.delete("refreshToken");
+  return await getCurrentUser();
 }
 
 export async function signOut() {
   const c = await cookies();
 
-  const accessToken = c.get("accessToken")?.value || undefined;
-  const refreshToken = c.get("refreshToken")?.value || undefined;
+  const accessToken = c.get("accessToken")?.value;
+  const refreshToken = c.get("refreshToken")?.value;
 
   try {
     if (accessToken && refreshToken) {
@@ -36,32 +30,25 @@ export async function signOut() {
     // ignore logout failure
   }
 
-  // Always clear cookies
-  clearAuthCookies(c);
+  c.delete("accessToken");
+  c.delete("refreshToken");
   redirect("/signin");
 }
 
 export async function getCurrentUser() {
   const c = await cookies();
 
-  let accessToken = c.get("accessToken")?.value || undefined;
+  let accessToken = c.get("accessToken")?.value;
 
-  // 🔒 Prevent infinite refresh attempts
-  let triedRefresh = false;
-
-  // Step 1: Try refresh if no access token
+  // If no access token, try refreshing
   if (!accessToken) {
     accessToken = await refreshAccessToken();
-    triedRefresh = true;
-
     if (!accessToken) return null;
   }
 
-  // Step 2: Try fetching user
+  // Try fetching user
   const res = await fetch(`${API_URL}/auth/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });
 
@@ -70,16 +57,13 @@ export async function getCurrentUser() {
     return data.user;
   }
 
-  // Step 3: Try refresh ONLY ONCE
-  if (res.status === 401 && !triedRefresh) {
+  // If 401, try refresh once
+  if (res.status === 401) {
     const newToken = await refreshAccessToken();
-
     if (!newToken) return null;
 
     const retry = await fetch(`${API_URL}/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${newToken}`,
-      },
+      headers: { Authorization: `Bearer ${newToken}` },
       cache: "no-store",
     });
 
@@ -94,28 +78,37 @@ export async function getCurrentUser() {
 
 async function refreshAccessToken(): Promise<string | null> {
   const c = await cookies();
-  if (c.get("refreshFailed")?.value === "true") {
-    return null;
-  }
-
   const refreshToken = c.get("refreshToken")?.value;
 
   if (!refreshToken) return null;
 
-  const res = await fetch(`http://localhost:3000/api/auth/refresh`, {
-    method: "POST",
-    headers: {
-      cookie: c.toString(),
-    },
-    cache: "no-store",
-    body: JSON.stringify({ refreshToken }),
-  });
+  try {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
+    if (!res.ok) {
+      // Refresh failed — clear everything to break any redirect loop
+      c.delete("accessToken");
+      c.delete("refreshToken");
+      return null;
+    }
+
+    const tokens = await res.json();
+
+    c.set("accessToken", tokens.accessToken, { path: "/" });
+    c.set("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      path: "/",
+    });
+
+    return tokens.accessToken;
+  } catch {
+    c.delete("accessToken");
+    c.delete("refreshToken");
     return null;
   }
-
-  const tokens = await res.json();
-
-  return tokens.accessToken;
 }

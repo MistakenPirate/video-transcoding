@@ -7,16 +7,15 @@ export function middleware(request: NextRequest) {
 
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
   const accessToken = request.cookies.get("accessToken")?.value;
-  const refreshToken = request.cookies.get("refreshToken")?.value;
-  const hasAuth = accessToken || refreshToken;
 
-  // Redirect unauthenticated users to signin
-  if (!isPublic && !hasAuth) {
+  // Only consider authenticated if there's a valid access token
+  // (not just a refresh token — that would cause redirect loops
+  // when the access token expires and getCurrentUser returns null)
+  if (!isPublic && !accessToken) {
     return NextResponse.redirect(new URL("/signin", request.url));
   }
 
-  // Redirect authenticated users away from auth pages
-  if (isPublic && hasAuth) {
+  if (isPublic && accessToken) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
