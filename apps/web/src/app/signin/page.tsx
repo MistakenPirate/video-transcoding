@@ -36,32 +36,60 @@ const Signin = () => {
     const serverResult = await signIn(formData);
     if (serverResult?.errors) {
       setErrors(serverResult.errors);
+      return;
     }
+
+    // redirect after successful login
+    window.location.href = "/dashboard";
   }
+
+  // function handleInputChange(field: string, value: string) {
+  //   const result = signInSchema.safeParse({
+  //     email: field === "email" ? value : "",
+  //     password: field === "password" ? value : "",
+  //   });
+
+  //   if (!result.success) {
+  //     const fieldError = result.error.issues.find(
+  //       (error) => error.path[0] === field,
+  //     );
+  //     if (fieldError) {
+  //       setClientErrors((prev) => ({
+  //         ...prev,
+  //         [field]: [fieldError.message],
+  //       }));
+  //     }
+  //   } else {
+  //     setClientErrors((prev) => ({
+  //       ...prev,
+  //       [field]: [],
+  //     }));
+  //   }
+  // }
 
   function handleInputChange(field: string, value: string) {
-    const result = signInSchema.safeParse({
-      email: field === "email" ? value : "",
-      password: field === "password" ? value : "",
-    });
+  let fieldSchema;
 
-    if (!result.success) {
-      const fieldError = result.error.issues.find(
-        (error) => error.path[0] === field,
-      );
-      if (fieldError) {
-        setClientErrors((prev) => ({
-          ...prev,
-          [field]: [fieldError.message],
-        }));
-      }
-    } else {
-      setClientErrors((prev) => ({
-        ...prev,
-        [field]: [],
-      }));
-    }
+  if (field === "email") {
+    fieldSchema = signInSchema.shape.email;
+  } else if (field === "password") {
+    fieldSchema = signInSchema.shape.password;
   }
+
+  const result = fieldSchema?.safeParse(value);
+
+  if (!result?.success) {
+    setClientErrors((prev) => ({
+      ...prev,
+      [field]: result.error.issues.map((issue) => issue.message),
+    }));
+  } else {
+    setClientErrors((prev) => ({
+      ...prev,
+      [field]: [],
+    }));
+  }
+}
 
   return (
     <div className="bg-rf-surface text-rf-on-surface font-[family-name:var(--font-inter)] min-h-screen flex flex-col relative">
