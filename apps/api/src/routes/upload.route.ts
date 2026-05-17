@@ -6,6 +6,7 @@ import { uploadDir } from "../config/paths";
 import { computeFileHash } from "../utils/computeHash";
 import { upload } from "../utils/storage";
 import { uploadFileToS3 } from "../utils/uploadToS3";
+import { deleteFileFromS3, deleteFolderFromS3 } from "../utils/deleteFromS3";
 
 const router: Router = Router();
 
@@ -112,3 +113,65 @@ router.get("/status/:id", async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
+router.delete("/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({
+      error: "Upload ID is required",
+    });
+  }
+
+  try {
+    // Find video
+    const [video] = await db
+      .select()
+      .from(metaDb)
+      .where(eq(metaDb.uploadId, id))
+      .limit(1);
+
+    if (!video) {
+      return res.status(404).json({
+        error: "Video not found",
+      });
+    }
+
+    // Optional security check
+    if (video.userId !== req.user?.userId) {
+      return res.status(403).json({
+        error: "Unauthorized",
+      });
+    }
+
+    if (video.s3Key) {
+  await deleteFileFromS3(video.s3Key);
+}
+
+if (video.jobId) {
+  await deleteFolderFromS3(`videos/${video.jobId}/`);
+}
+
+    // Delete related outbox entries
+    await db
+      .delete(outboxDB)
+      .where(eq(outboxDB.uploadId, id));
+
+    // Delete video metadata
+    await db
+      .delete(metaDb)
+      .where(eq(metaDb.uploadId, id));
+
+    return res.json({
+      success: true,
+      message: "Video discarded successfully",
+    });
+  } catch (error) {
+    console.error("Delete error:", error);
+
+    return res.status(500).json({
+      error: "Failed to discard video",
+    });
+  }
+});
