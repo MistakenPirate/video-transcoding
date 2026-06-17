@@ -41,10 +41,10 @@ interface TranscodeJob {
 }
 
 const RESOLUTIONS = [
-  { name: "360p", width: 640, height: 360, bitrate: "800k" },
-  { name: "480p", width: 854, height: 480, bitrate: "1400k" },
-  // { name: "720p", width: 1280, height: 720, bitrate: "2800k" },
-  // { name: "1080p", width: 1920, height: 1080, bitrate: "5000k" },
+  { name: "360p", width: 640, height: 360, bitrate: "800k", level: "3.0" },
+  { name: "480p", width: 854, height: 480, bitrate: "1400k", level: "3.1" },
+  { name: "720p", width: 1280, height: 720, bitrate: "2800k", level: "3.1" },
+  { name: "1080p", width: 1920, height: 1080, bitrate: "5000k", level: "4.0" },
 ];
 
 async function downloadFromS3(s3Key: string, localPath: string): Promise<void> {
@@ -125,7 +125,13 @@ function transcodeToHLS(
   inputPath: string,
   outputDir: string,
   jobId: string,
-  resolution: { name: string; width: number; height: number; bitrate: string },
+  resolution: {
+    name: string;
+    width: number;
+    height: number;
+    bitrate: string;
+    level: string;
+  },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const outputPath = join(outputDir, resolution.name);
@@ -142,7 +148,7 @@ function transcodeToHLS(
       .outputOptions([
         "-pix_fmt yuv420p",
         "-profile:v baseline",
-        "-level 3.1",
+        `-level ${resolution.level}`,
         "-hls_time 10",
         "-hls_list_size 0",
         "-hls_segment_filename",
