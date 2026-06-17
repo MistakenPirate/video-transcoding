@@ -1,19 +1,47 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { apiFetch } from '@/services/api';
 import type { Video } from '@/types/api';
 
+const PAGE_SIZE = 4;
+
+interface VideosResponse {
+  videos: Video[];
+  pagination: {
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+    nextOffset: number | null;
+  };
+}
+
 export function useVideos() {
-  const { data, isLoading, error, refetch, isRefetching } = useQuery({
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['videos'],
-    queryFn: () => apiFetch<{ videos: Video[] }>('/videos'),
+    queryFn: ({ pageParam }) =>
+      apiFetch<VideosResponse>(`/videos?limit=${PAGE_SIZE}&offset=${pageParam}`),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.pagination.nextOffset ?? undefined,
   });
 
   return {
-    videos: data?.videos ?? [],
+    videos: data?.pages.flatMap((page) => page.videos) ?? [],
     loading: isLoading,
     error: error?.message ?? null,
     refreshing: isRefetching,
     refresh: refetch,
+    loadMore: () => {
+      if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+    loadingMore: isFetchingNextPage,
   };
 }

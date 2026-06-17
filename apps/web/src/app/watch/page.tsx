@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import Hls from "hls.js";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -63,6 +63,18 @@ function VideoThumbnail({ jobId }: { jobId: string }) {
 
 const cardRotations = ["rotate-[1deg]", "-rotate-[1deg]", "rotate-[0.5deg]", "-rotate-[0.5deg]", "rotate-[1.5deg]", "-rotate-[1deg]"];
 
+const PAGE_SIZE = 12;
+
+interface VideosResponse {
+  videos: Video[];
+  pagination: {
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+    nextOffset: number | null;
+  };
+}
+
 function getStatusBadge(status: string) {
   switch (status) {
     case "completed":
@@ -105,12 +117,22 @@ function getStatusBadge(status: string) {
 }
 
 export default function WatchPage() {
-  const { data, isLoading: loading, error: queryError } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    error: queryError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["videos"],
-    queryFn: () => apiFetch<{ videos: Video[] }>("/videos"),
+    queryFn: ({ pageParam }) =>
+      apiFetch<VideosResponse>(`/videos?limit=${PAGE_SIZE}&offset=${pageParam}`),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.pagination.nextOffset ?? undefined,
   });
 
-  const videos = data?.videos ?? [];
+  const videos = data?.pages.flatMap((page) => page.videos) ?? [];
   const error = queryError?.message ?? null;
 
   return (
@@ -285,6 +307,19 @@ export default function WatchPage() {
                 </div>
               </article>
             ))}
+          </div>
+        )}
+
+        {/* Load More */}
+        {!loading && hasNextPage && (
+          <div className="mt-12 flex justify-center">
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="bg-rf-surface-container-high text-rf-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 border-2 border-rf-primary hover:border-rf-tertiary active:translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {isFetchingNextPage ? "Loading..." : "Load More"}
+            </button>
           </div>
         )}
       </main>

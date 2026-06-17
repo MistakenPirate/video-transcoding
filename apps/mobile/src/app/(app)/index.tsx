@@ -10,7 +10,8 @@ import { getTokens } from '@/services/api';
 export default function VideoLibraryScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { videos, loading, error, refreshing, refresh } = useVideos();
+  const { videos, loading, error, refreshing, refresh, loadMore, loadingMore } =
+    useVideos();
   const [token, setToken] = useState<string | null>(null);
 
   const refreshToken = useCallback(() => {
@@ -44,6 +45,17 @@ export default function VideoLibraryScreen() {
         contentContainerStyle={styles.list}
         refreshing={refreshing}
         onRefresh={() => { refresh(); refreshToken(); }}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.primary}
+              style={styles.footer}
+            />
+          ) : null
+        }
         ListHeaderComponent={
           <Text style={[styles.header, { color: theme.textSecondary }]}>
             YOUR VIDEOS
@@ -81,6 +93,9 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  footer: {
+    paddingVertical: 16,
   },
   header: {
     fontSize: 11,

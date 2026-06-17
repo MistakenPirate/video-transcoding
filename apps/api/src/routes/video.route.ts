@@ -9,7 +9,15 @@ const router: Router = Router();
 // GET /videos - List current user's videos
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const videos = await db
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit as string, 10) || 20, 1),
+      100,
+    );
+    const offset = Math.max(parseInt(req.query.offset as string, 10) || 0, 0);
+
+    // Fetch one extra row to determine whether more pages exist
+    // without running a separate COUNT query.
+    const rows = await db
       .select({
         uploadId: metaDb.uploadId,
         filename: metaDb.filename,
@@ -19,9 +27,22 @@ router.get("/", async (req: Request, res: Response) => {
       })
       .from(metaDb)
       .where(eq(metaDb.userId, req.user!.userId))
-      .orderBy(desc(metaDb.uploadedAt));
+      .orderBy(desc(metaDb.uploadedAt))
+      .limit(limit + 1)
+      .offset(offset);
 
-    res.json({ videos });
+    const hasMore = rows.length > limit;
+    const videos = hasMore ? rows.slice(0, limit) : rows;
+
+    res.json({
+      videos,
+      pagination: {
+        limit,
+        offset,
+        hasMore,
+        nextOffset: hasMore ? offset + limit : null,
+      },
+    });
   } catch (error) {
     console.error("List videos error:", error);
     res.status(500).json({ error: "Failed to list videos" });
