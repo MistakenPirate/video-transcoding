@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 
 import { apiFetch } from '@/services/api';
 import type { Video } from '@/types/api';
@@ -15,7 +15,8 @@ interface VideosResponse {
   };
 }
 
-export function useVideos() {
+export function useVideos(search = '') {
+  const q = search.trim();
   const {
     data,
     isLoading,
@@ -26,11 +27,15 @@ export function useVideos() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['videos'],
+    queryKey: ['videos', q],
     queryFn: ({ pageParam }) =>
-      apiFetch<VideosResponse>(`/videos?limit=${PAGE_SIZE}&offset=${pageParam}`),
+      apiFetch<VideosResponse>(
+        `/videos?limit=${PAGE_SIZE}&offset=${pageParam}` +
+          (q ? `&q=${encodeURIComponent(q)}` : ''),
+      ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.pagination.nextOffset ?? undefined,
+    placeholderData: keepPreviousData,
   });
 
   return {

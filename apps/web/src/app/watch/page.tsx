@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import Hls from "hls.js";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -117,6 +117,14 @@ function getStatusBadge(status: string) {
 }
 
 export default function WatchPage() {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const {
     data,
     isLoading: loading,
@@ -125,11 +133,15 @@ export default function WatchPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["videos"],
+    queryKey: ["videos", debouncedSearch],
     queryFn: ({ pageParam }) =>
-      apiFetch<VideosResponse>(`/videos?limit=${PAGE_SIZE}&offset=${pageParam}`),
+      apiFetch<VideosResponse>(
+        `/videos?limit=${PAGE_SIZE}&offset=${pageParam}` +
+          (debouncedSearch ? `&q=${encodeURIComponent(debouncedSearch)}` : ""),
+      ),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.pagination.nextOffset ?? undefined,
+    placeholderData: keepPreviousData,
   });
 
   const videos = data?.pages.flatMap((page) => page.videos) ?? [];
@@ -163,6 +175,20 @@ export default function WatchPage() {
           </Link>
         </div>
 
+        {/* Search */}
+        <div className="mb-8 relative max-w-md">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-rf-primary absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search videos..."
+            className="w-full bg-rf-surface-container-high border border-rf-primary text-rf-on-surface placeholder:text-rf-secondary font-[family-name:var(--font-inter)] pl-10 pr-3 py-3 focus:outline-none focus:border-rf-tertiary"
+          />
+        </div>
+
         {/* Loading */}
         {loading && (
           <div className="flex flex-col items-center py-24">
@@ -189,17 +215,21 @@ export default function WatchPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
             </svg>
             <p className="font-[family-name:var(--font-space-grotesk)] text-xl font-semibold text-rf-primary uppercase tracking-wider mb-2">
-              No videos uploaded yet
+              {debouncedSearch ? "No matching videos" : "No videos uploaded yet"}
             </p>
             <p className="text-rf-secondary mb-8">
-              Start your first project by uploading a video file.
+              {debouncedSearch
+                ? `Nothing found for "${debouncedSearch}". Try a different search.`
+                : "Start your first project by uploading a video file."}
             </p>
-            <Link
-              href="/upload"
-              className="bg-rf-primary text-rf-on-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 border border-rf-primary hover:border-rf-tertiary hover:border-b-4 active:translate-y-0.5 transition-all"
-            >
-              Upload your first video
-            </Link>
+            {!debouncedSearch && (
+              <Link
+                href="/upload"
+                className="bg-rf-primary text-rf-on-primary font-[family-name:var(--font-space-grotesk)] text-sm font-semibold tracking-[0.1em] uppercase px-8 py-3 border border-rf-primary hover:border-rf-tertiary hover:border-b-4 active:translate-y-0.5 transition-all"
+              >
+                Upload your first video
+              </Link>
+            )}
           </div>
         )}
 

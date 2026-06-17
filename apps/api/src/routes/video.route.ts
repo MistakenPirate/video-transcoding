@@ -1,7 +1,7 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { db, metaDb } from "@video-transcoding/db";
 import { s3Client } from "@video-transcoding/s3";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Request, Response, Router } from "express";
 
 const router: Router = Router();
@@ -14,6 +14,24 @@ router.get("/", async (req: Request, res: Response) => {
       100,
     );
     const offset = Math.max(parseInt(req.query.offset as string, 10) || 0, 0);
+    const q = (req.query.q as string | undefined)?.trim();
+
+    const ownedByUser = eq(metaDb.userId, req.user!.userId);
+    // When searching, match either a literal substring (so "cons" finds
+    // "consistent") OR a fuzzy word match (so typos like "konsis" still hit).
+    // word_similarity compares the query against the closest substring of the
+    // filename, unlike plain similarity() which scores against the whole string.
+    // Both use the GIN trigram index. Order by closeness; else newest first.
+    const likePattern = q ? `%${q.replace(/[\\%_]/g, "\\$&")}%` : "";
+    const where = q
+      ? and(
+          ownedByUser,
+          sql`(${metaDb.filename} ILIKE ${likePattern} OR ${q} <% ${metaDb.filename})`,
+        )
+      : ownedByUser;
+    const orderBy = q
+      ? desc(sql`word_similarity(${q}, ${metaDb.filename})`)
+      : desc(metaDb.uploadedAt);
 
     // Fetch one extra row to determine whether more pages exist
     // without running a separate COUNT query.
@@ -26,8 +44,8 @@ router.get("/", async (req: Request, res: Response) => {
         uploadedAt: metaDb.uploadedAt,
       })
       .from(metaDb)
-      .where(eq(metaDb.userId, req.user!.userId))
-      .orderBy(desc(metaDb.uploadedAt))
+      .where(where)
+      .orderBy(orderBy)
       .limit(limit + 1)
       .offset(offset);
 

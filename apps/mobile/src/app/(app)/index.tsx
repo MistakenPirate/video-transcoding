@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { VideoCard } from '@/components/video-card';
 import { useTheme } from '@/hooks/use-theme';
@@ -10,9 +10,16 @@ import { getTokens } from '@/services/api';
 export default function VideoLibraryScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const { videos, loading, error, refreshing, refresh, loadMore, loadingMore } =
-    useVideos();
+    useVideos(debouncedSearch);
   const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const refreshToken = useCallback(() => {
     getTokens().then((t) => setToken(t?.accessToken ?? null));
@@ -22,16 +29,25 @@ export default function VideoLibraryScreen() {
     refreshToken();
   }, [refreshToken]);
 
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <TextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search videos..."
+        placeholderTextColor={theme.textSecondary}
+        autoCapitalize="none"
+        autoCorrect={false}
+        style={[
+          styles.search,
+          { color: theme.text, borderColor: theme.primary },
+        ]}
+      />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      ) : (
       <FlatList
         data={videos}
         keyExtractor={(item) => item.uploadId}
@@ -71,13 +87,16 @@ export default function VideoLibraryScreen() {
                   {'\u25C6'}
                 </Text>
                 <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                  No videos yet. Upload from the web app to get started.
+                  {debouncedSearch
+                    ? `No videos match "${debouncedSearch}".`
+                    : 'No videos yet. Upload from the web app to get started.'}
                 </Text>
               </>
             )}
           </View>
         }
       />
+      )}
     </View>
   );
 }
@@ -90,6 +109,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  search: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    fontSize: 14,
   },
   list: {
     padding: 16,
