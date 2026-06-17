@@ -1,9 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -24,7 +25,33 @@ const QUALITIES = [
 export default function WatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedQuality, setSelectedQuality] = useState(0);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => apiFetch(`/videos/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
+      router.back();
+    },
+    onError: (e: Error) => Alert.alert('Delete failed', e.message),
+  });
+
+  const confirmDelete = (filename: string) => {
+    Alert.alert(
+      'Delete video',
+      `Delete "${filename}"? This permanently removes the video and its files.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteMutation.mutate(),
+        },
+      ],
+    );
+  };
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['video', id],
@@ -129,6 +156,15 @@ export default function WatchScreen() {
           <Text style={[styles.uploadId, { color: theme.textSecondary }]}>
             {video.uploadId}
           </Text>
+          <Pressable
+            style={[styles.deleteButton, { borderColor: theme.error }]}
+            onPress={() => confirmDelete(video.filename)}
+            disabled={deleteMutation.isPending}
+          >
+            <Text style={[styles.deleteText, { color: theme.error }]}>
+              {deleteMutation.isPending ? 'DELETING...' : 'DELETE VIDEO'}
+            </Text>
+          </Pressable>
         </View>
       )}
     </View>
@@ -186,5 +222,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
     letterSpacing: 0.5,
+  },
+  deleteButton: {
+    marginTop: 20,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  deleteText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
 });

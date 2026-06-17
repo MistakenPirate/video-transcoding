@@ -1,6 +1,6 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { db, metaDb } from "@video-transcoding/db";
-import { s3Client } from "@video-transcoding/s3";
+import { deleteObject, deletePrefix, s3Client } from "@video-transcoding/s3";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Request, Response, Router } from "express";
 
@@ -64,6 +64,51 @@ router.get("/", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("List videos error:", error);
     res.status(500).json({ error: "Failed to list videos" });
+  }
+});
+
+// DELETE /videos/:uploadId - Delete a video and all its underlying S3 objects
+router.delete("/:uploadId", async (req: Request, res: Response) => {
+  const { uploadId } = req.params;
+
+  try {
+    // Ownership check: only fetch a row that belongs to the current user.
+    const [video] = await db
+      .select({
+        uploadId: metaDb.uploadId,
+        jobId: metaDb.jobId,
+        s3Key: metaDb.s3Key,
+        s3Bucket: metaDb.s3Bucket,
+      })
+      .from(metaDb)
+      .where(
+        and(eq(metaDb.uploadId, uploadId), eq(metaDb.userId, req.user!.userId)),
+      );
+
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    // Remove transcoded output (master playlist, per-resolution playlists,
+    // every .ts segment, thumbnail) which all live under videos/{jobId}/.
+    if (video.jobId) {
+      const outputBucket =
+        process.env.OUTPUT_BUCKET || process.env.S3_BUCKET || "uploaded-videos";
+      await deletePrefix(outputBucket, `videos/${video.jobId}/`);
+    }
+
+    // Remove the original uploaded file.
+    if (video.s3Key && video.s3Bucket) {
+      await deleteObject(video.s3Bucket, video.s3Key);
+    }
+
+    // Delete the DB row (cascades to outbox via the uploadId foreign key).
+    await db.delete(metaDb).where(eq(metaDb.uploadId, uploadId));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete video error:", error);
+    res.status(500).json({ error: "Failed to delete video" });
   }
 });
 
