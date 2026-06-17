@@ -1,9 +1,8 @@
 "use client";
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import Hls from "hls.js";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { apiFetch, getAccessToken } from "@/lib/api";
@@ -17,45 +16,24 @@ interface Video {
 }
 
 function VideoThumbnail({ jobId }: { jobId: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+  const token = getAccessToken();
+  if (!token || error) return null;
 
-    const token = getAccessToken();
-    if (!token) return;
-
-    const hlsUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/videos/stream/${jobId}/master.m3u8`;
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        xhrSetup: (xhr) => {
-          xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-        },
-      });
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.currentTime = 2;
-      });
-      return () => hls.destroy();
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-      video.addEventListener("loadedmetadata", () => {
-        video.currentTime = 2;
-      }, { once: true });
-    }
-  }, [jobId]);
+  // Use the JPEG generated during transcoding instead of loading the full HLS
+  // stream just to render a static frame. Token goes in the query string since
+  // <img> can't set an Authorization header.
+  const src = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/videos/stream/${jobId}/thumbnail.jpg?token=${encodeURIComponent(token)}`;
 
   return (
-    <video
-      ref={videoRef}
-      muted
-      playsInline
-      preload="auto"
-      onSeeked={() => setReady(true)}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      onLoad={() => setReady(true)}
+      onError={() => setError(true)}
       className={`w-full h-full object-cover transition-opacity duration-500 ${ready ? "opacity-80 grayscale group-hover:grayscale-0" : "opacity-0"}`}
     />
   );
