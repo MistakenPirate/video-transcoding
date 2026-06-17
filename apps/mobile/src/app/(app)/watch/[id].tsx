@@ -18,6 +18,8 @@ import type { Video } from '@/types/api';
 
 const QUALITIES = [
   { label: 'Auto', path: 'master.m3u8' },
+  { label: '1080p', path: '1080p/index.m3u8' },
+  { label: '720p', path: '720p/index.m3u8' },
   { label: '480p', path: '480p/index.m3u8' },
   { label: '360p', path: '360p/index.m3u8' },
 ];
@@ -156,6 +158,7 @@ export default function WatchScreen() {
           <Text style={[styles.uploadId, { color: theme.textSecondary }]}>
             {video.uploadId}
           </Text>
+          {/* Delete temporarily hidden — didn't look great on mobile.
           <Pressable
             style={[styles.deleteButton, { borderColor: theme.error }]}
             onPress={() => confirmDelete(video.filename)}
@@ -165,6 +168,7 @@ export default function WatchScreen() {
               {deleteMutation.isPending ? 'DELETING...' : 'DELETE VIDEO'}
             </Text>
           </Pressable>
+          */}
         </View>
       )}
     </View>
